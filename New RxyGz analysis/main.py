@@ -23,12 +23,29 @@ def extract_last_aa(file_path, sheet_name):
         # Filter out empty rows
         if not all(cell is None for cell in row):
             row = row[1:row.index("*")]
-            if list(row[:len(IGNORED_AA_LIST)]) == IGNORED_AA_LIST:
-                row = row[len(IGNORED_AA_LIST):]
+            # Disable filtering out the Ignored_aa_list
+            # if list(row[:len(IGNORED_AA_LIST)]) == IGNORED_AA_LIST:
+            #     row = row[len(IGNORED_AA_LIST):]
 
             row = list(row[-8:])
             data.append(row)
     return data
+
+
+def write_dict_to_csv(dictionary, filename):
+    with open(filename, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        write_dict_recursive(dictionary, writer)
+
+
+def write_dict_recursive(dictionary, writer, parent_key=''):
+    for key, value in dictionary.items():
+        if isinstance(value, dict):
+            new_parent_key = f'{parent_key}.{key}' if parent_key else key
+            write_dict_recursive(value, writer, new_parent_key)
+        else:
+            fieldname = f'{parent_key}.{key}' if parent_key else key
+            writer.writerow([fieldname, value])
 
 
 # init
@@ -60,13 +77,14 @@ workbook.close()
 # Calculate and extract experiment data
 file_path = "experiment_data.xlsx"
 sheet_name = '90mer_APPBP2 substrates'
-pattern = r'R\w\wG'  # Define the pattern you want to search for
+pattern = r'R\w\w[GA]'  # Define the pattern you want to search for
 matches_filtered_c = []
 matches_filtered_ab = []
 
 result = extract_last_aa(file_path, sheet_name)
 # Search for the pattern in the nested lists using list comprehension
 matches = [sublist for sublist in result if re.findall(pattern, ''.join(sublist))]
+
 for sublist in matches:
     joined_sublist = ''.join(sublist)
     matches_in_sublist = re.findall(pattern, joined_sublist)
@@ -74,7 +92,7 @@ for sublist in matches:
         max_match = max(matches_in_sublist, key=lambda match: joined_sublist.index(match))
         matches_filtered_ab.append(max_match)
 
-pattern = r'R\w\wG\w'  # to suit C location
+pattern = r'R\w\w[GA]\w'  # to suit C location
 for sublist in matches:
     joined_sublist = ''.join(sublist)
     matches_in_sublist = re.findall(pattern, joined_sublist)
@@ -120,9 +138,9 @@ fold_a_values = [res[key]['fold_a'] for key in keys]
 x = range(len(keys))
 bar_width = 0.25
 # Plot the bar graphs
-plt.bar(x, fold_c_values, width=bar_width, label='rxxgX')
-plt.bar(x, fold_b_values, width=bar_width, label='rxXgx', alpha=0.7)
-plt.bar(x, fold_a_values, width=bar_width, label='rXxgx', alpha=0.5)
+plt.bar(x, fold_c_values, width=bar_width, label='rxygZ', color="gray")
+plt.bar(x, fold_b_values, width=bar_width, label='rxYgz', color="red")
+plt.bar(x, fold_a_values, width=bar_width, label='rXygz', color="blue")
 # Set the x-axis ticks and labels
 plt.xticks(x, keys)
 # Set the labels and title
@@ -144,49 +162,84 @@ fold_a_values = [res[key]['fold_a'] for key in keys]
 # Set the x-axis values and the width of the bars
 x = range(len(keys))
 bar_width = 0.35
+
+# # Plot the bar graph for Fold C
+# plt.bar(x, fold_c_values, width=bar_width, color="gray")
+# plt.xlabel('Amino Acids')
+# plt.ylabel('Fold Values')
+# plt.title('Fold as function of AA - Location 0 (rxxgX)')
+# plt.xticks(x, keys)
+# plt.show()
+# plt.savefig("rxxgX.png")
+
+# Sort the data based on fold_c_values in descending order
+sorted_data = sorted(zip(keys, fold_c_values), key=lambda x: x[1], reverse=True)
+
+# Extract the sorted keys and values
+keys, fold_c_values = zip(*sorted_data)
+
 # Plot the bar graph for Fold C
-plt.bar(x, fold_c_values, width=bar_width)
+plt.bar(x, fold_c_values, width=bar_width, color="gray")
 plt.xlabel('Amino Acids')
 plt.ylabel('Fold Values')
-plt.title('Fold as function of AA - Location 0 (rxxgX)')
+plt.title('Fold as function of AA - Location 0 (rxygZ)')
 plt.xticks(x, keys)
 plt.show()
 plt.savefig("rxxgX.png")
 
+# # Plot the bar graph for Fold B
+# plt.bar(x, fold_b_values, width=bar_width, color="red")
+# plt.xlabel('Amino Acids')
+# plt.ylabel('Fold Values')
+# plt.title('Fold as function of AA - Location -2 (rxXgx)')
+# plt.xticks(x, keys)
+# plt.show()
+# plt.savefig("rxXgx.png")
+
+keys = list(res.keys())  # init
+# Sort the data based on fold_b_values in descending order
+sorted_data = sorted(zip(keys, fold_b_values), key=lambda x: x[1], reverse=True)
+
+# Extract the sorted keys and values
+keys, fold_b_values = zip(*sorted_data)
+
 # Plot the bar graph for Fold B
-plt.bar(x, fold_b_values, width=bar_width)
+plt.bar(x, fold_b_values, width=bar_width, color="red")
 plt.xlabel('Amino Acids')
 plt.ylabel('Fold Values')
-plt.title('Fold as function of AA - Location -2 (rxXgx)')
+plt.title('Fold as function of AA - Location -2 (rxYgz)')
 plt.xticks(x, keys)
 plt.show()
 plt.savefig("rxXgx.png")
 
+# # Plot the bar graph for Fold A
+# plt.bar(x, fold_a_values, width=bar_width, color="blue")
+# plt.xlabel('Amino Acids')
+# plt.ylabel('Fold Values')
+# plt.title('Fold as function of AA - Location -3 (rXxgx)')
+# plt.xticks(x, keys)
+# plt.show()
+# plt.savefig("rXxgx.png")
+
+keys = list(res.keys())  # init
+# Sort the data based on fold_a_values in descending order
+sorted_data = sorted(zip(keys, fold_a_values), key=lambda x: x[1], reverse=True)
+
+# Extract the sorted keys and values
+keys, fold_a_values = zip(*sorted_data)
+
 # Plot the bar graph for Fold A
-plt.bar(x, fold_a_values, width=bar_width)
+plt.bar(x, fold_a_values, width=bar_width, color="blue")
 plt.xlabel('Amino Acids')
 plt.ylabel('Fold Values')
-plt.title('Fold as function of AA - Location -3 (rXxgx)')
+plt.title('Fold as function of AA - Location -3 (rXygz)')
 plt.xticks(x, keys)
 plt.show()
 plt.savefig("rXxgx.png")
 
 # Export CSV file
 csv_file = 'outputs_data.csv'
-
-def write_dict_to_csv(dictionary, filename):
-    with open(filename, 'w', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-        write_dict_recursive(dictionary, writer)
-
-def write_dict_recursive(dictionary, writer, parent_key=''):
-    for key, value in dictionary.items():
-        if isinstance(value, dict):
-            new_parent_key = f'{parent_key}.{key}' if parent_key else key
-            write_dict_recursive(value, writer, new_parent_key)
-        else:
-            fieldname = f'{parent_key}.{key}' if parent_key else key
-            writer.writerow([fieldname, value])
-
+csv_file2 = 'totals_data.csv'
 # Example usage
 write_dict_to_csv(res, csv_file)
+write_dict_to_csv(res, csv_file2)
